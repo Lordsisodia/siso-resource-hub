@@ -1,6 +1,6 @@
 
 import { useQuery } from '@tanstack/react-query';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Tool } from '@/components/tools/types';
 import { Sidebar } from '@/components/Sidebar';
@@ -14,6 +14,7 @@ export default function Tools() {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [sortBy, setSortBy] = useState<string>('rating');
 
+  // Memoize categories to prevent unnecessary re-renders
   const categories = useMemo(() => [
     { id: 'all', label: 'All Tools' },
     { id: 'featured', label: 'Featured' },
@@ -23,6 +24,7 @@ export default function Tools() {
     { id: 'GPT Builder', label: 'GPT Builder' },
   ], []);
 
+  // Use useQuery with stable config to prevent unnecessary re-fetches
   const { data: tools, isLoading, error } = useQuery({
     queryKey: ['core_tools'],
     queryFn: async () => {
@@ -44,9 +46,12 @@ export default function Tools() {
           : null
       })) as Tool[];
     },
+    staleTime: 5 * 60 * 1000, // Consider data fresh for 5 minutes
+    cacheTime: 30 * 60 * 1000, // Keep in cache for 30 minutes
   });
 
-  const sortTools = (tools: Tool[]) => {
+  // Memoize sort function to prevent unnecessary re-renders
+  const sortTools = useCallback((tools: Tool[]) => {
     return [...tools].sort((a, b) => {
       switch (sortBy) {
         case 'rating':
@@ -61,8 +66,9 @@ export default function Tools() {
           return 0;
       }
     });
-  };
+  }, [sortBy]);
 
+  // Memoize filtered tools to prevent unnecessary re-calculations
   const filteredTools = useMemo(() => {
     if (!tools) return [];
     
@@ -80,8 +86,9 @@ export default function Tools() {
     });
 
     return sortTools(filtered);
-  }, [tools, searchQuery, selectedCategory, sortBy]);
+  }, [tools, searchQuery, selectedCategory, sortTools]);
 
+  // Memoize category stats to prevent unnecessary re-calculations
   const categoryStats = useMemo(() => {
     if (!tools) return {};
     return categories.reduce((acc, category) => {
