@@ -1,18 +1,28 @@
 import { defineConfig } from "vite";
-import react from "@vitejs/plugin-react-swc";
+import react from "@vitejs/plugin-react";
 import path from "path";
-import { componentTagger } from "lovable-tagger";
+import { visualizer } from 'rollup-plugin-visualizer';
 
-// [Analysis] Implementing granular code splitting for optimal chunk sizes
-// [Plan] Monitor performance impact and adjust splits if needed
+// Performance optimization configuration
 export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
     port: 8080,
   },
   plugins: [
-    react(),
-    mode === 'development' && componentTagger(),
+    react({
+      jsxRuntime: 'automatic',
+      jsxImportSource: 'react',
+      include: '**/*.{jsx,tsx}',
+    }),
+    // Bundle analysis in development
+    mode === 'development' && visualizer({
+      filename: './dist/stats.html',
+      open: false,
+      gzipSize: true,
+      brotliSize: true,
+      template: 'treemap', // Use treemap for better visualization
+    }),
   ].filter(Boolean),
   resolve: {
     alias: {
@@ -28,118 +38,86 @@ export default defineConfig(({ mode }) => ({
       polyfill: true
     },
     reportCompressedSize: true,
+    // Optimize chunk size
     rollupOptions: {
       output: {
         manualChunks: {
-          // Core vendor bundles - split by functionality
-          'react-core': ['react', 'react-dom'],
-          'react-router': ['react-router-dom'],
+          // Core vendor chunks
+          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+          'vendor-ui': ['@radix-ui/react-toast', '@radix-ui/react-dialog', '@radix-ui/react-slot'],
+          'vendor-utils': ['clsx', 'tailwind-merge', 'lucide-react'],
+          'vendor-state': ['zustand', '@tanstack/react-query'],
           
-          // UI Components bundles - split by feature
-          'ui-core': ['@radix-ui/react-slot'],
-          'ui-navigation': ['@radix-ui/react-navigation-menu'],
-          'ui-overlay': ['@radix-ui/react-dialog', '@radix-ui/react-popover'],
-          'ui-tooltip': ['@radix-ui/react-tooltip'],
-          'ui-forms': ['@radix-ui/react-label', '@radix-ui/react-select'],
-          'ui-data': ['@radix-ui/react-avatar', '@radix-ui/react-progress'],
-          'ui-tabs': ['@radix-ui/react-tabs'],
-          'ui-switch': ['@radix-ui/react-switch'],
-          'ui-checkbox': ['@radix-ui/react-checkbox'],
-          
-          // Landing page chunks - split by section
-          'landing-hero': ['@/components/ui/animated-hero'],
-          'landing-features': ['@/components/blocks/feature-section-with-hover-effects'],
-          'landing-testimonials': ['@/components/landing/TestimonialSection'],
-          'landing-pricing': ['@/components/ui/pricing-card'],
-          
-          // Chat components - split by functionality
-          'chat-messages': ['@/components/chat/ChatMessage'],
-          'chat-input': ['@/components/chat/ChatInput'],
-          'chat-thread': ['@/components/ui/chat-message-list'],
-          
-          // Modal variants
-          'modal-dialog': ['@/components/ui/dialog'],
-          'modal-drawer': ['@/components/ui/drawer'],
-          'modal-sheet': ['@/components/ui/sheet'],
-          
-          // Animation bundles
-          'animation-transitions': ['framer-motion'],
-          'animation-loading': ['@/components/ui/message-loading'],
-          
-          // Utility bundles
-          'utils-styling': ['clsx', 'tailwind-merge'],
-          'utils-icons': ['lucide-react'],
-          'utils-date': ['date-fns'],
-          
-          // Form handling bundle
-          'form-core': ['react-hook-form'],
-          'form-validation': ['zod'],
-          
-          // Data management bundles
-          'data-query': ['@tanstack/react-query'],
-          'data-charts': ['recharts'],
-          
-          // Auth bundles
-          'auth-supabase': ['@supabase/auth-helpers-react'],
-          'auth-ui': ['@supabase/auth-ui-react'],
-          
-          // Blockchain bundles
-          'blockchain-solana': ['@solana/web3.js'],
-          'blockchain-moralis': ['moralis'],
-          
-          // State management
-          'state-auth': ['@/hooks/useAuthSession'],
-          'state-preferences': ['@/hooks/use-mobile'],
-          'state-app': ['@/hooks/usePoints'],
-          
-          // Index route specific bundles
-          'index-components': [
-            '@/components/Hero',
-            '@/components/AuthButton',
-            '@/components/ui/expandable-chat',
-            '@/components/Footer',
-            '@/components/effects/FloatingOrbs'
+          // Feature chunks
+          'feature-auth': [
+            '@/store/auth',
+            '@/hooks/useAuthSession',
+            '@/hooks/useGoogleAuth',
+            '@/pages/Auth',
           ],
+          'feature-education': [
+            '@/pages/SisoEducation',
+            '@/pages/EducatorDetail',
+            '@/pages/VideoDetail',
+          ],
+          'feature-economy': [
+            '@/pages/Economy',
+            '@/pages/CryptoExchange',
+            '@/pages/Crypto',
+            '@/pages/Leaderboards',
+          ],
+          
+          // UI component chunks
+          'ui-core': ['@/components/ui/button', '@/components/ui/input'],
+          'ui-feedback': ['@/components/ui/toast', '@/components/ui/alert'],
+          'ui-layout': ['@/components/ui/waves-background'],
+          'ui-data': ['@/components/ui/virtual-list', '@/components/ui/optimized-image'],
+          
+          // Performance monitoring
+          'perf': ['@/utils/performance', '@/contexts/performance-context'],
         },
-        
+        // Chunk naming format
+        chunkFileNames: (chunkInfo) => {
+          const name = chunkInfo.name === 'index' ? 'main' : chunkInfo.name;
+          return mode === 'production' 
+            ? `assets/js/${name}.[hash].js`
+            : `assets/js/${name}.js`;
+        },
+        // Asset naming format
         assetFileNames: (assetInfo) => {
-          if (!assetInfo.name) return 'assets/[name]-[hash][extname]';
+          if (!assetInfo.name) return 'assets/[name].[hash][extname]';
           
           const extType = assetInfo.name.split('.').pop() || '';
           if (/png|jpe?g|svg|gif|tiff|bmp|ico/i.test(extType)) {
-            return `assets/img/[name]-[hash][extname]`;
+            return `assets/img/[name].[hash][extname]`;
           }
-          return `assets/${extType}/[name]-[hash][extname]`;
+          return `assets/${extType}/[name].[hash][extname]`;
         },
-        
-        chunkFileNames: 'assets/js/[name]-[hash].js',
-        entryFileNames: 'assets/js/[name]-[hash].js',
       },
     },
-    sourcemap: mode === 'development',
+    // Performance optimizations
+    terserOptions: {
+      compress: {
+        drop_console: mode === 'production',
+        drop_debugger: mode === 'production',
+      },
+    },
   },
-  
   optimizeDeps: {
     include: [
-      'react', 
-      'react-dom', 
+      'react',
+      'react-dom',
       'react-router-dom',
+      '@radix-ui/react-toast',
       '@radix-ui/react-dialog',
       '@radix-ui/react-slot',
-      '@radix-ui/react-tabs',
       'clsx',
       'tailwind-merge',
-      'lucide-react'
+      'lucide-react',
+      'zustand',
+      '@tanstack/react-query',
     ],
-    exclude: ['moralis']
   },
-  
-  experimental: {
-    renderBuiltUrl(filename: string, { hostType }: { hostType: 'js' | 'css' | 'html' }) {
-      if (hostType === 'html') {
-        return { relative: true };
-      }
-      return { relative: true };
-    },
-  }
+  // Enable source maps in development
+  sourcemap: mode === 'development',
 }));

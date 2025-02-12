@@ -9,8 +9,11 @@ import {
   FormProvider,
   useFormContext,
 } from "react-hook-form"
+import { createContext, useContext } from 'react';
+import { z } from 'zod';
+import { useForm, FormState, FieldValue } from '@/hooks/use-form';
+import { cn } from '@/utils/cn';
 
-import { cn } from "@/lib/utils"
 import { Label } from "@/components/ui/label"
 
 const Form = FormProvider
@@ -163,6 +166,66 @@ const FormMessage = React.forwardRef<
   )
 })
 FormMessage.displayName = "FormMessage"
+
+interface FormContextValue<T extends Record<string, FieldValue>> extends FormState<T> {
+  submit: () => Promise<void>;
+}
+
+const FormContext = createContext<FormContextValue<Record<string, FieldValue>> | null>(null);
+
+export function useFormContext<T extends Record<string, FieldValue>>() {
+  const context = useContext(FormContext);
+  if (!context) {
+    throw new Error('useFormContext must be used within a Form component');
+  }
+  return context as FormContextValue<T>;
+}
+
+type FormProps<T extends Record<string, FieldValue>> = Omit<React.FormHTMLAttributes<HTMLFormElement>, 'onSubmit'> & {
+  initialValues: T;
+  validationSchema?: z.ZodObject<z.ZodRawShape>;
+  onSubmit: (values: T) => Promise<void> | void;
+  children: React.ReactNode;
+};
+
+export function Form<T extends Record<string, FieldValue>>({
+  initialValues,
+  validationSchema,
+  onSubmit,
+  children,
+  className,
+  ...props
+}: FormProps<T>) {
+  const form = useForm<T>({
+    initialValues,
+    validationSchema,
+  });
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await form.handleSubmit(onSubmit);
+  };
+
+  const contextValue: FormContextValue<T> = {
+    ...form,
+    submit: () => form.handleSubmit(onSubmit),
+  };
+
+  return (
+    <FormContext.Provider value={contextValue}>
+      <form
+        onSubmit={handleSubmit}
+        className={cn('space-y-4', className)}
+        noValidate
+        {...props}
+      >
+        {children}
+      </form>
+    </FormContext.Provider>
+  );
+}
+
+Form.displayName = 'Form';
 
 export {
   useFormField,
