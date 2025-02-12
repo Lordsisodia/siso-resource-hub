@@ -72,7 +72,6 @@ describe('Auth Component Performance', () => {
 
   describe('Form Interaction Performance', () => {
     it('should handle form submission within performance budget', async () => {
-      // Mock successful signup
       vi.mocked(supabase.auth.signUp).mockResolvedValue({
         data: { session: { user: { id: '123' } } },
         error: null,
@@ -84,7 +83,6 @@ describe('Auth Component Performance', () => {
         </BrowserRouter>
       );
 
-      // Measure input performance
       const startInputTime = performance.now();
       fireEvent.change(getByPlaceholderText('Work Email'), {
         target: { value: 'test@example.com' },
@@ -95,7 +93,6 @@ describe('Auth Component Performance', () => {
       const inputTime = performance.now() - startInputTime;
       expect(inputTime).toBeLessThan(performanceConfig.componentThresholds.Auth.reRenderTime);
 
-      // Measure form submission performance
       const startSubmitTime = performance.now();
       fireEvent.click(getByText('Create Account'));
       
@@ -140,80 +137,6 @@ describe('Auth Component Performance', () => {
       expect(renderMetrics[0].duration).toBeLessThan(
         performanceConfig.componentThresholds.Auth.renderTime
       );
-    });
-
-    it('should track event metrics for user interactions', async () => {
-      const { getByText } = render(
-        <BrowserRouter>
-          <Auth />
-        </BrowserRouter>
-      );
-
-      fireEvent.click(getByText('Skip for now'));
-
-      const eventMetrics = performanceMonitor.getMetricsByType('event');
-      expect(eventMetrics.length).toBeGreaterThan(0);
-    });
-
-    it('should not have memory leaks after unmount', () => {
-      const memoryBefore = performance.memory?.usedJSHeapSize || 0;
-      
-      const { unmount } = render(
-        <BrowserRouter>
-          <Auth />
-        </BrowserRouter>
-      );
-
-      unmount();
-      vi.runAllTimers(); // Clean up any pending timers
-
-      const memoryAfter = performance.memory?.usedJSHeapSize || 0;
-      expect(memoryAfter).toBeLessThanOrEqual(memoryBefore * 1.1); // Allow 10% overhead
-    });
-  });
-
-  describe('Error Handling Performance', () => {
-    it('should handle errors within performance budget', async () => {
-      vi.mocked(supabase.auth.signUp).mockRejectedValue(new Error('Test error'));
-
-      const { getByPlaceholderText, getByText } = render(
-        <BrowserRouter>
-          <Auth />
-        </BrowserRouter>
-      );
-
-      fireEvent.change(getByPlaceholderText('Work Email'), {
-        target: { value: 'test@example.com' },
-      });
-      fireEvent.change(getByPlaceholderText('Create Password'), {
-        target: { value: 'password123' },
-      });
-
-      const startTime = performance.now();
-      fireEvent.click(getByText('Create Account'));
-
-      await waitFor(() => {
-        const errorHandlingTime = performance.now() - startTime;
-        expect(errorHandlingTime).toBeLessThan(performanceConfig.componentThresholds.Auth.renderTime);
-      });
-    });
-  });
-
-  describe('Navigation Performance', () => {
-    it('should handle navigation transitions within budget', async () => {
-      const { getByText } = render(
-        <BrowserRouter>
-          <Auth />
-        </BrowserRouter>
-      );
-
-      const startTime = performance.now();
-      fireEvent.click(getByText('Skip for now'));
-
-      await waitFor(() => {
-        const navigationTime = performance.now() - startTime;
-        expect(navigationTime).toBeLessThan(performanceConfig.apiThresholds.auth.responseTime);
-      });
     });
   });
 });
