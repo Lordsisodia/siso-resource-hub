@@ -1,3 +1,4 @@
+import React, { Profiler } from 'react';
 import { performanceMonitor } from '@/services/optimized-performance-monitor';
 
 // Performance metric types
@@ -404,7 +405,7 @@ export interface PerformanceProfilerProps {
   children: React.ReactNode;
 }
 
-export const PerformanceProfiler = React.memo<PerformanceProfilerProps>(({ id, children }) => (
+export const PerformanceProfiler: React.FC<PerformanceProfilerProps> = React.memo(({ id, children }) => (
   <Profiler id={id} onRender={logPerformance}>
     {children}
   </Profiler>
@@ -509,4 +510,4 @@ export function measureMemoryUsage(): {
     external: 0,
     arrayBuffers: 0
   };
-} 
+}
