@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { Suspense, useMemo } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { useAuthStore } from '@/store/auth';
 import { PerformanceProfiler } from '@/utils/performance';
@@ -41,6 +41,40 @@ function App() {
     initialized: state.initialized
   }));
 
+  // Use useMemo to prevent unnecessary re-renders
+  const profiledRoutes = useMemo(() => (
+    <Routes>
+      <Route path="/" element={<routes.Index />} />
+      <Route path="/home" element={<routes.Home />} />
+      <Route path="/auth" element={<routes.Auth />} />
+      <Route path="/profile" element={<routes.Profile />} />
+      <Route path="/tools" element={<routes.Tools />} />
+      <Route path="/tools/:id" element={<routes.ToolPage />} />
+      <Route path="/ai-news" element={<routes.AINews />} />
+      <Route path="/siso-ai" element={<routes.SisoAI />} />
+      <Route path="/assistants" element={<routes.ChatGPTAssistants />} />
+      <Route path="/automations" element={<routes.Automations />} />
+      <Route path="/networking" element={<routes.Networking />} />
+      <Route path="/community" element={<routes.Community />} />
+      <Route path="/learn" element={<routes.LearnNetwork />} />
+      <Route path="/economy/earn" element={<routes.HowToEarn />} />
+      <Route path="/earn" element={<routes.HowToEarn />} />
+      <Route path="/economy" element={<routes.Economy />} />
+      <Route path="/economy/crypto-exchange" element={<routes.CryptoExchange />} />
+      <Route path="/exchange" element={<routes.CryptoExchange />} />
+      <Route path="/crypto" element={<routes.Crypto />} />
+      <Route path="/economy/leaderboards" element={<routes.Leaderboards />} />
+      <Route path="/leaderboards" element={<routes.Leaderboards />} />
+      <Route path="/education" element={<routes.SisoEducation />} />
+      <Route path="/education/educators/:slug" element={<routes.EducatorDetail />} />
+      <Route path="/education/videos/:id" element={<routes.VideoDetail />} />
+      <Route path="/terms" element={<routes.Terms />} />
+      <Route path="/privacy" element={<routes.PrivacyPolicy />} />
+      <Route path="/thank-you" element={<routes.ThankYou />} />
+      <Route path="/onboarding/social" element={<routes.SocialOnboarding />} />
+    </Routes>
+  ), []);
+
   React.useEffect(() => {
     checkAuth();
   }, [checkAuth]);
@@ -56,36 +90,7 @@ function App() {
   return (
     <ErrorBoundary>
       <PerformanceProfiler id="App">
-        <Routes>
-          <Route path="/" element={<routes.Index />} />
-          <Route path="/home" element={<routes.Home />} />
-          <Route path="/auth" element={<routes.Auth />} />
-          <Route path="/profile" element={<routes.Profile />} />
-          <Route path="/tools" element={<routes.Tools />} />
-          <Route path="/tools/:id" element={<routes.ToolPage />} />
-          <Route path="/ai-news" element={<routes.AINews />} />
-          <Route path="/siso-ai" element={<routes.SisoAI />} />
-          <Route path="/assistants" element={<routes.ChatGPTAssistants />} />
-          <Route path="/automations" element={<routes.Automations />} />
-          <Route path="/networking" element={<routes.Networking />} />
-          <Route path="/community" element={<routes.Community />} />
-          <Route path="/learn" element={<routes.LearnNetwork />} />
-          <Route path="/economy/earn" element={<routes.HowToEarn />} />
-          <Route path="/earn" element={<routes.HowToEarn />} />
-          <Route path="/economy" element={<routes.Economy />} />
-          <Route path="/economy/crypto-exchange" element={<routes.CryptoExchange />} />
-          <Route path="/exchange" element={<routes.CryptoExchange />} />
-          <Route path="/crypto" element={<routes.Crypto />} />
-          <Route path="/economy/leaderboards" element={<routes.Leaderboards />} />
-          <Route path="/leaderboards" element={<routes.Leaderboards />} />
-          <Route path="/education" element={<routes.SisoEducation />} />
-          <Route path="/education/educators/:slug" element={<routes.EducatorDetail />} />
-          <Route path="/education/videos/:id" element={<routes.VideoDetail />} />
-          <Route path="/terms" element={<routes.Terms />} />
-          <Route path="/privacy" element={<routes.PrivacyPolicy />} />
-          <Route path="/thank-you" element={<routes.ThankYou />} />
-          <Route path="/onboarding/social" element={<routes.SocialOnboarding />} />
-        </Routes>
+        {profiledRoutes}
       </PerformanceProfiler>
     </ErrorBoundary>
   );

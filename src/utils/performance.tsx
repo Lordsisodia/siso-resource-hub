@@ -1,4 +1,4 @@
-import React, { Profiler } from 'react';
+import React, { Profiler, useEffect, useRef } from 'react';
 import { performanceMonitor } from '@/services/optimized-performance-monitor';
 
 // Performance metric types
@@ -405,12 +405,18 @@ export interface PerformanceProfilerProps {
   children: React.ReactNode;
 }
 
-export const PerformanceProfiler: React.FC<PerformanceProfilerProps> = React.memo(({ id, children }) => (
-  <Profiler id={id} onRender={logPerformance}>
-    {children}
-  </Profiler>
-));
+const ProfilerComponent = ({ id, children }: PerformanceProfilerProps) => {
+  // Use useRef to ensure we don't create infinite updates
+  const profilerRef = useRef<string>(id);
 
+  return (
+    <Profiler id={profilerRef.current} onRender={logPerformance}>
+      {children}
+    </Profiler>
+  );
+};
+
+export const PerformanceProfiler = React.memo(ProfilerComponent);
 PerformanceProfiler.displayName = 'PerformanceProfiler';
 
 // Export singleton instance methods
