@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
+
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Sidebar } from '@/components/Sidebar';
@@ -13,6 +14,21 @@ import { MintNFTButton } from '@/components/crypto/MintNFTButton';
 import { FloatingOrbs } from '@/components/effects/FloatingOrbs';
 import { ConnectWalletButton } from '@/components/crypto/ConnectWalletButton';
 
+const initialFormData = {
+  fullName: '',
+  businessName: '',
+  businessType: '',
+  industry: '',
+  interests: '',
+  bio: '',
+  linkedinUrl: '',
+  websiteUrl: '',
+  youtubeUrl: '',
+  instagramUrl: '',
+  twitterUrl: '',
+  professionalRole: '',
+};
+
 const Profile = () => {
   const [user, setUser] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
@@ -20,92 +36,92 @@ const Profile = () => {
   const [isEditing, setIsEditing] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
-
-  const [formData, setFormData] = useState({
-    fullName: '',
-    businessName: '',
-    businessType: '',
-    industry: '',
-    interests: '',
-    bio: '',
-    linkedinUrl: '',
-    websiteUrl: '',
-    youtubeUrl: '',
-    instagramUrl: '',
-    twitterUrl: '',
-    professionalRole: '',
-  });
-
-  const getProfile = useCallback(async () => {
-    try {
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      
-      if (sessionError) {
-        console.error('[Profile] Session error:', sessionError);
-        throw sessionError;
-      }
-      
-      if (!session) {
-        console.log('[Profile] No session found, redirecting to home');
-        navigate('/');
-        return;
-      }
-
-      console.log('[Profile] Session found:', session.user.id);
-      setUser(session.user);
-
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', session.user.id)
-        .single();
-
-      if (profileError) {
-        console.error('[Profile] Profile fetch error:', profileError);
-        throw profileError;
-      }
-
-      if (profileData) {
-        console.log('[Profile] Profile data found:', profileData);
-        setProfile(profileData);
-        setFormData({
-          fullName: profileData.full_name || '',
-          businessName: profileData.business_name || '',
-          businessType: profileData.business_type || '',
-          industry: profileData.industry || '',
-          interests: Array.isArray(profileData.interests) ? profileData.interests.join(', ') : '',
-          bio: profileData.bio || '',
-          linkedinUrl: profileData.linkedin_url || '',
-          websiteUrl: profileData.website_url || '',
-          youtubeUrl: profileData.youtube_url || '',
-          instagramUrl: profileData.instagram_url || '',
-          twitterUrl: profileData.twitter_url || '',
-          professionalRole: profileData.professional_role || '',
-        });
-      }
-    } catch (error: any) {
-      console.error('[Profile] Error in getProfile:', error);
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Failed to load profile data",
-      });
-      navigate('/');
-    } finally {
-      setLoading(false);
-    }
-  }, [navigate, toast]);
+  const [formData, setFormData] = useState(initialFormData);
 
   useEffect(() => {
-    getProfile();
-  }, [getProfile]);
+    let isMounted = true;
 
-  const handleFormChange = useCallback((field: string, value: string) => {
-    setFormData(prev => ({
-      ...prev,
+    const fetchData = async () => {
+      try {
+        // Get session first
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        
+        if (sessionError) throw sessionError;
+        
+        if (!session) {
+          if (isMounted) {
+            navigate('/');
+          }
+          return;
+        }
+
+        // Only update state if component is still mounted
+        if (!isMounted) return;
+
+        setUser(session.user);
+
+        // Fetch profile data
+        const { data: profileData, error: profileError } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .single();
+
+        if (profileError) throw profileError;
+
+        // Only update state if component is still mounted
+        if (!isMounted) return;
+
+        if (profileData) {
+          setProfile(profileData);
+          // Update form data in a single state update
+          setFormData({
+            fullName: profileData.full_name || '',
+            businessName: profileData.business_name || '',
+            businessType: profileData.business_type || '',
+            industry: profileData.industry || '',
+            interests: Array.isArray(profileData.interests) 
+              ? profileData.interests.join(', ') 
+              : '',
+            bio: profileData.bio || '',
+            linkedinUrl: profileData.linkedin_url || '',
+            websiteUrl: profileData.website_url || '',
+            youtubeUrl: profileData.youtube_url || '',
+            instagramUrl: profileData.instagram_url || '',
+            twitterUrl: profileData.twitter_url || '',
+            professionalRole: profileData.professional_role || '',
+          });
+        }
+      } catch (error) {
+        console.error('[Profile] Error:', error);
+        if (isMounted) {
+          toast({
+            variant: "destructive",
+            title: "Error",
+            description: "Failed to load profile data"
+          });
+          navigate('/');
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    fetchData();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []); // Empty dependency array since we only want to fetch once on mount
+
+  const handleFormChange = (field: string, value: string) => {
+    setFormData(current => ({
+      ...current,
       [field]: value
     }));
-  }, []);
+  };
 
   if (loading) {
     return (
