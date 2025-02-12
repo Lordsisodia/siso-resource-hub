@@ -1,4 +1,4 @@
-import create from 'zustand';
+import { create } from 'zustand';
 import { devtools, persist } from 'zustand/middleware';
 import { supabase } from '@/integrations/supabase/client';
 import { measureExecutionTime } from '@/utils/performance';
@@ -20,8 +20,8 @@ interface AuthState {
 }
 
 export const useAuthStore = create<AuthState>()(
-  devtools(
-    persist(
+  persist(
+    devtools(
       (set, get) => ({
         user: null,
         loading: true,
@@ -68,9 +68,12 @@ export const useAuthStore = create<AuthState>()(
         },
       }),
       {
-        name: 'auth-storage',
-        partialize: (state) => ({ user: state.user }),
+        name: 'auth-store'
       }
-    )
+    ),
+    {
+      name: 'auth-storage',
+      partialize: (state) => ({ user: state.user }),
+    }
   )
 ); 

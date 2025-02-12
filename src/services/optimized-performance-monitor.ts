@@ -1,7 +1,7 @@
 import { debounce } from '@/utils/performance';
 import { GLOBAL_BUDGETS, ComponentBudgets } from '@/config/performance-budgets';
 
-export type MetricType = 'render' | 'event' | 'query' | 'error' | 'memory';
+export type MetricType = 'render' | 'event' | 'query' | 'error' | 'memory' | 'mutation' | 'validation' | 'navigation';
 
 export interface PerformanceMetric {
   id: string;

@@ -1,43 +1,66 @@
-import React, { Suspense } from 'react';
+import React, { Suspense, lazy } from 'react';
 import { ErrorBoundary } from '@/components/error-boundary';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
+import { measureExecutionTime } from '@/utils/performance';
 
-interface LazyLoadingOptions {
+interface LazyLoadOptions {
   fallback?: React.ReactNode;
-  ErrorComponent?: React.ComponentType<{ error: Error }>;
+  errorBoundary?: boolean;
+  chunkName?: string;
 }
 
 const DefaultLoadingFallback = () => (
-  <div className="flex items-center justify-center min-h-screen">
+  <div className="flex items-center justify-center min-h-[200px]">
     <LoadingSpinner size="lg" />
   </div>
 );
 
-const DefaultErrorComponent: React.FC<{ error: Error }> = ({ error }) => (
-  <div className="flex flex-col items-center justify-center min-h-screen p-4 space-y-4">
-    <h2 className="text-xl font-semibold text-destructive">Something went wrong</h2>
-    <p className="text-muted-foreground">{error.message}</p>
-  </div>
-);
-
-export function lazyRoute(
-  factory: () => Promise<{ default: React.ComponentType<any> }>,
-  chunkName: string,
-  options: LazyLoadingOptions = {}
+export function lazyLoad<T extends React.ComponentType<any>>(
+  factory: () => Promise<{ default: T }>,
+  options: LazyLoadOptions = {}
 ) {
-  const LazyComponent = React.lazy(factory);
   const {
     fallback = <DefaultLoadingFallback />,
-    ErrorComponent = DefaultErrorComponent
+    errorBoundary = true,
+    chunkName = 'unknown'
   } = options;
 
-  return function LazyLoadedRoute(props: any) {
-    return (
-      <ErrorBoundary FallbackComponent={ErrorComponent}>
-        <Suspense fallback={fallback}>
-          <LazyComponent {...props} />
-        </Suspense>
-      </ErrorBoundary>
+  const LazyComponent = lazy(() => 
+    measureExecutionTime(
+      () => factory(),
+      `lazy-load-${chunkName}`,
+      'event',
+      { metadata: { chunkName } }
+    )
+  );
+
+  return function LazyLoadedComponent(props: React.ComponentProps<T>) {
+    const Component = (
+      <Suspense fallback={fallback}>
+        <LazyComponent {...props} />
+      </Suspense>
     );
+
+    return errorBoundary ? (
+      <ErrorBoundary>
+        {Component}
+      </ErrorBoundary>
+    ) : Component;
   };
+}
+
+// Helper for route components
+export function lazyRoute(
+  factory: () => Promise<{ default: React.ComponentType<any> }>,
+  chunkName: string
+) {
+  return lazyLoad(factory, {
+    chunkName,
+    errorBoundary: true,
+    fallback: (
+      <div className="flex items-center justify-center min-h-screen">
+        <LoadingSpinner size="lg" />
+      </div>
+    )
+  });
 } 

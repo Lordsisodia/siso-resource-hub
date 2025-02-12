@@ -9,29 +9,6 @@ interface BudgetConfig {
   [key: string]: Budget;
 }
 
-export const GLOBAL_BUDGETS: Record<MetricType, Budget> = {
-  render: {
-    warning: 16, // 1 frame at 60fps
-    error: 33 // 2 frames at 60fps
-  },
-  event: {
-    warning: 100,
-    error: 300
-  },
-  query: {
-    warning: 500,
-    error: 1000
-  },
-  error: {
-    warning: 0,
-    error: 0
-  },
-  memory: {
-    warning: 80, // 80% of heap limit
-    error: 90 // 90% of heap limit
-  }
-};
-
 export const ComponentBudgets: BudgetConfig = {
   AuthForm: {
     warning: 50,
@@ -82,6 +59,21 @@ export const GLOBAL_BUDGETS: Record<MetricType, MetricBudget> = {
     error: 1000,
     aggregationType: 'p95',
   },
+  event: {
+    warning: 100,
+    error: 300,
+    aggregationType: 'p95',
+  },
+  error: {
+    warning: 0,
+    error: 0,
+    aggregationType: 'max',
+  },
+  memory: {
+    warning: 80, // 80% of heap limit
+    error: 90, // 90% of heap limit
+    aggregationType: 'max',
+  }
 };
 
 export interface ComponentBudgets {
