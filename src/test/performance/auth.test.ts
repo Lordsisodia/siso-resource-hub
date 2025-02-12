@@ -102,7 +102,7 @@ describe('Auth Component Performance', () => {
       });
     });
 
-    it('should handle Google sign-in click within performance budget', async () => {
+    it('should handle OAuth sign-in click within performance budget', async () => {
       vi.mocked(supabase.auth.signInWithOAuth).mockResolvedValue({
         data: { provider: 'google' },
         error: null,

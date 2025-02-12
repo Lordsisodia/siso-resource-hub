@@ -1,5 +1,4 @@
-
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Sidebar } from '@/components/Sidebar';
@@ -22,7 +21,6 @@ const Profile = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  // Add form state
   const [formData, setFormData] = useState({
     fullName: '',
     businessName: '',
@@ -38,91 +36,76 @@ const Profile = () => {
     professionalRole: '',
   });
 
-  useEffect(() => {
-    let mounted = true;
-
-    const getProfile = async () => {
-      try {
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-        
-        if (sessionError) {
-          console.error('[Profile] Session error:', sessionError);
-          throw sessionError;
-        }
-        
-        if (!session) {
-          console.log('[Profile] No session found, redirecting to home');
-          if (mounted) {
-            navigate('/');
-          }
-          return;
-        }
-
-        if (mounted) {
-          console.log('[Profile] Session found:', session.user.id);
-          setUser(session.user);
-
-          const { data: profileData, error: profileError } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', session.user.id)
-            .single();
-
-          if (profileError) {
-            console.error('[Profile] Profile fetch error:', profileError);
-            throw profileError;
-          }
-
-          if (profileData && mounted) {
-            console.log('[Profile] Profile data found:', profileData);
-            setProfile(profileData);
-            // Update form data with profile data
-            setFormData({
-              fullName: profileData.full_name || '',
-              businessName: profileData.business_name || '',
-              businessType: profileData.business_type || '',
-              industry: profileData.industry || '',
-              interests: Array.isArray(profileData.interests) ? profileData.interests.join(', ') : '',
-              bio: profileData.bio || '',
-              linkedinUrl: profileData.linkedin_url || '',
-              websiteUrl: profileData.website_url || '',
-              youtubeUrl: profileData.youtube_url || '',
-              instagramUrl: profileData.instagram_url || '',
-              twitterUrl: profileData.twitter_url || '',
-              professionalRole: profileData.professional_role || '',
-            });
-          }
-        }
-      } catch (error: any) {
-        console.error('[Profile] Error in getProfile:', error);
-        if (mounted) {
-          toast({
-            variant: "destructive",
-            title: "Error",
-            description: "Failed to load profile data",
-          });
-          navigate('/');
-        }
-      } finally {
-        if (mounted) {
-          setLoading(false);
-        }
+  const getProfile = useCallback(async () => {
+    try {
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError) {
+        console.error('[Profile] Session error:', sessionError);
+        throw sessionError;
       }
-    };
+      
+      if (!session) {
+        console.log('[Profile] No session found, redirecting to home');
+        navigate('/');
+        return;
+      }
 
-    getProfile();
+      console.log('[Profile] Session found:', session.user.id);
+      setUser(session.user);
 
-    return () => {
-      mounted = false;
-    };
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', session.user.id)
+        .single();
+
+      if (profileError) {
+        console.error('[Profile] Profile fetch error:', profileError);
+        throw profileError;
+      }
+
+      if (profileData) {
+        console.log('[Profile] Profile data found:', profileData);
+        setProfile(profileData);
+        setFormData({
+          fullName: profileData.full_name || '',
+          businessName: profileData.business_name || '',
+          businessType: profileData.business_type || '',
+          industry: profileData.industry || '',
+          interests: Array.isArray(profileData.interests) ? profileData.interests.join(', ') : '',
+          bio: profileData.bio || '',
+          linkedinUrl: profileData.linkedin_url || '',
+          websiteUrl: profileData.website_url || '',
+          youtubeUrl: profileData.youtube_url || '',
+          instagramUrl: profileData.instagram_url || '',
+          twitterUrl: profileData.twitter_url || '',
+          professionalRole: profileData.professional_role || '',
+        });
+      }
+    } catch (error: any) {
+      console.error('[Profile] Error in getProfile:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to load profile data",
+      });
+      navigate('/');
+    } finally {
+      setLoading(false);
+    }
   }, [navigate, toast]);
 
-  const handleFormChange = (field: string, value: string) => {
+  useEffect(() => {
+    getProfile();
+  }, [getProfile]);
+
+  const handleFormChange = useCallback((field: string, value: string) => {
     setFormData(prev => ({
       ...prev,
       [field]: value
     }));
-  };
+  }, []);
 
   if (loading) {
     return (
