@@ -1,4 +1,5 @@
-import React, { Suspense, useMemo } from 'react';
+
+import React, { Suspense, useMemo, useEffect } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { useAuthStore } from '@/store/auth';
 import { PerformanceProfiler } from '@/utils/performance';
@@ -36,12 +37,30 @@ const routes = {
 };
 
 function App() {
+  // Get auth store values and functions using selector to prevent unnecessary rerenders
   const { checkAuth, initialized } = useAuthStore(state => ({
     checkAuth: state.checkAuth,
     initialized: state.initialized
   }));
 
-  // Use useMemo to prevent unnecessary re-renders
+  // Run checkAuth only once on mount
+  useEffect(() => {
+    let mounted = true;
+    
+    const initAuth = async () => {
+      if (mounted && !initialized) {
+        await checkAuth();
+      }
+    };
+
+    initAuth();
+
+    return () => {
+      mounted = false;
+    };
+  }, [checkAuth, initialized]);
+
+  // Memoize routes to prevent unnecessary re-renders
   const profiledRoutes = useMemo(() => (
     <Routes>
       <Route path="/" element={<routes.Index />} />
@@ -75,10 +94,6 @@ function App() {
     </Routes>
   ), []);
 
-  React.useEffect(() => {
-    checkAuth();
-  }, [checkAuth]);
-
   if (!initialized) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -90,7 +105,13 @@ function App() {
   return (
     <ErrorBoundary>
       <PerformanceProfiler id="App">
-        {profiledRoutes}
+        <Suspense fallback={
+          <div className="flex items-center justify-center min-h-screen">
+            <LoadingSpinner size="lg" />
+          </div>
+        }>
+          {profiledRoutes}
+        </Suspense>
       </PerformanceProfiler>
     </ErrorBoundary>
   );
