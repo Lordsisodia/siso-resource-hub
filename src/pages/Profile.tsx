@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -38,6 +39,8 @@ const Profile = () => {
   });
 
   useEffect(() => {
+    let mounted = true;
+
     const getProfile = async () => {
       try {
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
@@ -49,58 +52,70 @@ const Profile = () => {
         
         if (!session) {
           console.log('[Profile] No session found, redirecting to home');
-          navigate('/');
+          if (mounted) {
+            navigate('/');
+          }
           return;
         }
 
-        console.log('[Profile] Session found:', session.user.id);
-        setUser(session.user);
+        if (mounted) {
+          console.log('[Profile] Session found:', session.user.id);
+          setUser(session.user);
 
-        const { data: profileData, error: profileError } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', session.user.id)
-          .single();
+          const { data: profileData, error: profileError } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', session.user.id)
+            .single();
 
-        if (profileError) {
-          console.error('[Profile] Profile fetch error:', profileError);
-          throw profileError;
-        }
+          if (profileError) {
+            console.error('[Profile] Profile fetch error:', profileError);
+            throw profileError;
+          }
 
-        if (profileData) {
-          console.log('[Profile] Profile data found:', profileData);
-          setProfile(profileData);
-          // Update form data with profile data
-          setFormData({
-            fullName: profileData.full_name || '',
-            businessName: profileData.business_name || '',
-            businessType: profileData.business_type || '',
-            industry: profileData.industry || '',
-            interests: Array.isArray(profileData.interests) ? profileData.interests.join(', ') : '',
-            bio: profileData.bio || '',
-            linkedinUrl: profileData.linkedin_url || '',
-            websiteUrl: profileData.website_url || '',
-            youtubeUrl: profileData.youtube_url || '',
-            instagramUrl: profileData.instagram_url || '',
-            twitterUrl: profileData.twitter_url || '',
-            professionalRole: profileData.professional_role || '',
-          });
+          if (profileData && mounted) {
+            console.log('[Profile] Profile data found:', profileData);
+            setProfile(profileData);
+            // Update form data with profile data
+            setFormData({
+              fullName: profileData.full_name || '',
+              businessName: profileData.business_name || '',
+              businessType: profileData.business_type || '',
+              industry: profileData.industry || '',
+              interests: Array.isArray(profileData.interests) ? profileData.interests.join(', ') : '',
+              bio: profileData.bio || '',
+              linkedinUrl: profileData.linkedin_url || '',
+              websiteUrl: profileData.website_url || '',
+              youtubeUrl: profileData.youtube_url || '',
+              instagramUrl: profileData.instagram_url || '',
+              twitterUrl: profileData.twitter_url || '',
+              professionalRole: profileData.professional_role || '',
+            });
+          }
         }
       } catch (error: any) {
         console.error('[Profile] Error in getProfile:', error);
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: "Failed to load profile data",
-        });
-        navigate('/');
+        if (mounted) {
+          toast({
+            variant: "destructive",
+            title: "Error",
+            description: "Failed to load profile data",
+          });
+          navigate('/');
+        }
       } finally {
-        setLoading(false);
+        if (mounted) {
+          setLoading(false);
+        }
       }
     };
 
     getProfile();
-  }, [navigate]);
+
+    return () => {
+      mounted = false;
+    };
+  }, [navigate, toast]);
 
   const handleFormChange = (field: string, value: string) => {
     setFormData(prev => ({
