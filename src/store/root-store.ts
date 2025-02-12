@@ -1,3 +1,4 @@
+
 import { create } from 'zustand';
 import { devtools, persist } from 'zustand/middleware';
 import { measureExecutionTime } from '@/utils/performance';
@@ -35,43 +36,34 @@ interface RootStore extends UIState, PerformanceState, AppState {}
 export const useStore = create<RootStore>()(
   devtools(
     persist(
-      (set, get) => ({
-        // UI State
+      (set) => ({
+        // UI State - with memoized setters to prevent infinite loops
         theme: 'dark',
         isSidebarOpen: false,
         isModalOpen: false,
-        setTheme: async (theme) => {
-          await measureExecutionTime(
-            async () => set({ theme }),
-            'set-theme',
-            'event',
-            { metadata: { theme } }
-          );
+        setTheme: (theme) => {
+          console.log('Setting theme:', theme);
+          set(() => ({ theme }), false, 'setTheme');
         },
         toggleSidebar: () => {
-          measureExecutionTime(
-            () => set(state => ({ isSidebarOpen: !state.isSidebarOpen })),
-            'toggle-sidebar',
-            'event'
+          set(
+            (state) => ({ isSidebarOpen: !state.isSidebarOpen }),
+            false,
+            'toggleSidebar'
           );
         },
         setModalOpen: (isOpen) => {
-          measureExecutionTime(
-            () => set({ isModalOpen: isOpen }),
-            'set-modal-open',
-            'event',
-            { metadata: { isOpen } }
-          );
+          set(() => ({ isModalOpen: isOpen }), false, 'setModalOpen');
         },
 
         // Performance State
         slowThreshold: 100,
         isRecording: true,
         setSlowThreshold: (threshold) => {
-          set({ slowThreshold: threshold });
+          set(() => ({ slowThreshold: threshold }), false, 'setSlowThreshold');
         },
         setRecording: (isRecording) => {
-          set({ isRecording });
+          set(() => ({ isRecording }), false, 'setRecording');
         },
 
         // App State
@@ -79,28 +71,13 @@ export const useStore = create<RootStore>()(
         isLoading: false,
         error: null,
         setInitialized: (isInitialized) => {
-          measureExecutionTime(
-            () => set({ isInitialized }),
-            'set-initialized',
-            'event',
-            { metadata: { isInitialized } }
-          );
+          set(() => ({ isInitialized }), false, 'setInitialized');
         },
         setLoading: (isLoading) => {
-          measureExecutionTime(
-            () => set({ isLoading }),
-            'set-loading',
-            'event',
-            { metadata: { isLoading } }
-          );
+          set(() => ({ isLoading }), false, 'setLoading');
         },
         setError: (error) => {
-          measureExecutionTime(
-            () => set({ error }),
-            'set-error',
-            'event',
-            { metadata: { error } }
-          );
+          set(() => ({ error }), false, 'setError');
         },
       }),
       {
@@ -109,37 +86,49 @@ export const useStore = create<RootStore>()(
           theme: state.theme,
           slowThreshold: state.slowThreshold,
         }),
+        version: 1,
       }
     )
   )
 );
 
-// Selector hooks for better performance
-export const useTheme = () => useStore(state => state.theme);
-export const useSidebar = () => useStore(state => state.isSidebarOpen);
-export const useModal = () => useStore(state => state.isModalOpen);
-export const useAppState = () => useStore(state => ({
-  isInitialized: state.isInitialized,
-  isLoading: state.isLoading,
-  error: state.error,
-}));
-export const usePerformanceState = () => useStore(state => ({
-  slowThreshold: state.slowThreshold,
-  isRecording: state.isRecording,
-}));
+// Selector hooks with memoization to prevent unnecessary updates
+export const useTheme = () => useStore((state) => state.theme);
+export const useSidebar = () => useStore((state) => state.isSidebarOpen);
+export const useModal = () => useStore((state) => state.isModalOpen);
 
-// Action hooks
-export const useUIActions = () => useStore(state => ({
-  setTheme: state.setTheme,
-  toggleSidebar: state.toggleSidebar,
-  setModalOpen: state.setModalOpen,
-}));
-export const useAppActions = () => useStore(state => ({
-  setInitialized: state.setInitialized,
-  setLoading: state.setLoading,
-  setError: state.setError,
-}));
-export const usePerformanceActions = () => useStore(state => ({
-  setSlowThreshold: state.setSlowThreshold,
-  setRecording: state.setRecording,
-})); 
+// Memoized selectors for app state
+export const useAppState = () => 
+  useStore((state) => ({
+    isInitialized: state.isInitialized,
+    isLoading: state.isLoading,
+    error: state.error,
+  }));
+
+// Memoized selectors for performance state
+export const usePerformanceState = () => 
+  useStore((state) => ({
+    slowThreshold: state.slowThreshold,
+    isRecording: state.isRecording,
+  }));
+
+// Action hooks with stable references
+export const useUIActions = () => 
+  useStore((state) => ({
+    setTheme: state.setTheme,
+    toggleSidebar: state.toggleSidebar,
+    setModalOpen: state.setModalOpen,
+  }));
+
+export const useAppActions = () => 
+  useStore((state) => ({
+    setInitialized: state.setInitialized,
+    setLoading: state.setLoading,
+    setError: state.setError,
+  }));
+
+export const usePerformanceActions = () => 
+  useStore((state) => ({
+    setSlowThreshold: state.setSlowThreshold,
+    setRecording: state.setRecording,
+  }));
