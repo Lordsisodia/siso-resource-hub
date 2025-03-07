@@ -711,6 +711,33 @@ export type Database = {
         }
         Relationships: []
       }
+      api_token_usage: {
+        Row: {
+          created_at: string | null
+          date: string
+          id: string
+          operations: Json | null
+          tokens_used: number
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          date: string
+          id?: string
+          operations?: Json | null
+          tokens_used?: number
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          date?: string
+          id?: string
+          operations?: Json | null
+          tokens_used?: number
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       article_reading_progress: {
         Row: {
           article_id: string | null
@@ -1925,6 +1952,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      news_fetch_debug: {
+        Row: {
+          error_message: string | null
+          function_name: string
+          id: string
+          request_payload: Json | null
+          response_data: Json | null
+          status_code: number | null
+          timestamp: string | null
+        }
+        Insert: {
+          error_message?: string | null
+          function_name: string
+          id?: string
+          request_payload?: Json | null
+          response_data?: Json | null
+          status_code?: number | null
+          timestamp?: string | null
+        }
+        Update: {
+          error_message?: string | null
+          function_name?: string
+          id?: string
+          request_payload?: Json | null
+          response_data?: Json | null
+          status_code?: number | null
+          timestamp?: string | null
+        }
+        Relationships: []
       }
       news_fetch_history: {
         Row: {
@@ -3751,6 +3808,13 @@ export type Database = {
       }
       safe_refresh_trending_articles: {
         Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      safe_track_token_usage: {
+        Args: {
+          operation: string
+          token_cost: number
+        }
         Returns: undefined
       }
       update_creator_featured_videos: {
